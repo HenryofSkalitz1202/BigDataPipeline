@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # 1. Storage Layer: MinIO (S3 Compatible Storage)
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Web UI Port
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - lakehouse_net
+
+  # 2. Iceberg Catalog (REST Catalog)
+  # This manages the metadata for Apache Iceberg
+  iceberg-catalog:
+    image: tabulario/iceberg-rest
+    container_name: iceberg-catalog
+    environment:
+      - CATALOG_WAREHOUSE=s3a://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+      - CATALOG_S3_ACCESS_KEY_ID=admin
+      - CATALOG_S3_SECRET_ACCESS_KEY=password123
+      - CATALOG_S3_PATH_STYLE_ACCESS=true
+    ports:
+      - "8181:8181"
+    depends_on:
+      - minio
+    networks:
+      - lakehouse_net
+
+  # 3. Data Processing: Trino
+  # dbt will connect here to perform joins and create the Data Mart
+  trino:
+    image: trinodb/trino
+    container_name: trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino_config/catalog:/etc/trino/catalog
+    depends_on:
+      - iceberg-catalog
+    networks:
+      - lakehouse_net
+
+  # 4. Data Processing: Spark (For Initial Load)
+  # Use this to move your .tbl/CSV files into Iceberg 
+  spark-iceberg:
+    image: tabulario/spark-iceberg
+    container_name: spark-iceberg
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password123
+      - AWS_REGION=us-east-1
+    volumes:
+      - /mnt/c/Users/edarr/Downloads/tpch-dbgen:/home/iceberg/data # Map your TPC-H data here
+    networks:
+      - lakehouse_net
+
+networks:
+  lakehouse_net:
+    driver: bridge
