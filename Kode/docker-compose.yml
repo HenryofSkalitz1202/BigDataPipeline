@@ -33,7 +33,7 @@ services:
   # This manages the metadata for Apache Iceberg
   iceberg-catalog:
     image: tabulario/iceberg-rest
-    container_name: iceberg-catalog
+    container_name: rest
     environment:
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
@@ -60,6 +60,7 @@ services:
       - "8080:8080"
     volumes:
       - ./trino_config/catalog:/etc/trino/catalog
+      - ./trino_config/config.properties:/etc/trino/config.properties
     depends_on:
       - iceberg-catalog
     networks:

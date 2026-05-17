@@ -3,6 +3,7 @@
 - Docker & Docker Compose
 - WSL (Windows Subsystem for Linux) — Recommended for dbgen execution
 - 20-25 GB of storage on host drive
+- 6GB RAM minimal
 
 ## Setup
 ### A. Initialize Infra
@@ -18,7 +19,6 @@ docker-compose up -d
 
 3. Access MinIO via `http://localhost:9001` with user `admin` and pass `password123` 
 <br>
-<br>
 
 #### Common errors:
 - Unexpected commit digest
@@ -28,8 +28,7 @@ docker-compose up -d
     ``` 
     It is most likely the result of insufficient space in the local which results in the download being interrupted, leaving a corrupted file fragment on containerd.
 <br>
-<br>
-To handle it, follow these debugging steps:
+    To handle it, follow these debugging steps: <br>
     1. Clear cache build
 
         ```
@@ -72,6 +71,10 @@ To handle it, follow these debugging steps:
 ### C. Ingestion
 Transform the generated .tbl files into Parquet format in MinIO
 1. Execute the ingestion script in the Spark container
+
+    ```
+    docker exec -it spark-iceberg spark-submit /home/iceberg/ingestion/loader.py
+    ```
 2. Verify the bucket `warehouse` in minIO contains Parquet files
 
 ### D. Data Mart
@@ -80,8 +83,25 @@ Transform the generated .tbl files into Parquet format in MinIO
     ```
     cd Kode/dbt_project
     ```
-2. Run the command
+
+2. Create the `profiles.yml` file based on the example given on `profiles.yml.example`. Default `user` and `password` works just fine, however you can modify it if necessary
+
+3. Run the command
 
     ```
+    dbt clean
     dbt run
     ```
+#### Common errors:
+- TrinoUserError(....Schema 'raw' does not exist")
+<br>
+    It is usually encountered after composing the containers back up.
+    <br> 
+
+    The solution is really simple you only need to make sure that you have run the ingestion script on the previous section before running `dbt clean` and `dbt run` 
+<br> 
+- TrinoQueryError(type=INSUFFICIENT_RESOURCES, name=EXCEEDED_LOCAL_MEMORY_LIMIT...)
+<br>
+    As the name suggests, it is a result of the query exceeding the per-node memory limit. <br>
+    
+    Logically, the solution would be to increase the memory limit in the config.properties

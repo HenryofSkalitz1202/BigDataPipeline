@@ -1,0 +1,14 @@
+trino_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: trino
+      host: localhost
+      port: 8080
+      user: admin # default user (modify if needed)
+      password: ""  # default password (modify if needed)
+      catalog: iceberg
+      schema: mart
+      threads: 4
+      session_properties:
+        join_distribution_type: PARTITIONED
