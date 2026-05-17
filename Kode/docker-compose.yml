@@ -30,7 +30,7 @@ services:
       - CATALOG_S3_SECRET_ACCESS_KEY=password123
       - CATALOG_S3_PATH_STYLE_ACCESS=true
     ports:
-      - "8181:8181"
+      - "9181:8181"
     depends_on:
       - minio
     networks:
