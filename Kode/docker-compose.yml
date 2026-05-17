@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Storage Layer: MinIO (S3 Compatible Storage)
   minio:
@@ -17,18 +15,35 @@ services:
     networks:
       - lakehouse_net
 
+  minio-init:
+    image: minio/mc
+    container_name: minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set myminio http://minio:9000 admin password123) do echo 'Waiting for MinIO...' && sleep 1; done;
+      /usr/bin/mc mb myminio/warehouse || true;
+      echo 'Bucket warehouse created successfully!';
+      "
+    networks:
+      - lakehouse_net
+
   # 2. Iceberg Catalog (REST Catalog)
   # This manages the metadata for Apache Iceberg
   iceberg-catalog:
     image: tabulario/iceberg-rest
     container_name: iceberg-catalog
     environment:
-      - CATALOG_WAREHOUSE=s3a://warehouse/
+      - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
-      - CATALOG_S3_ACCESS_KEY_ID=admin
-      - CATALOG_S3_SECRET_ACCESS_KEY=password123
-      - CATALOG_S3_PATH_STYLE_ACCESS=true
+      - CATALOG_S3_ACCESS__KEY__ID=admin
+      - CATALOG_S3_SECRET__ACCESS__KEY=password123
+      - CATALOG_S3_PATH__STYLE__ACCESS=true
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password123
+      - AWS_REGION=us-east-1
     ports:
       - "9181:8181"
     depends_on:
@@ -61,6 +76,7 @@ services:
       - AWS_REGION=us-east-1
     volumes:
       - ../data/raw_tbl:/home/iceberg/data
+      - ./ingestion:/home/iceberg/ingestion
     networks:
       - lakehouse_net
 
