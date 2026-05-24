@@ -1,9 +1,7 @@
 data
+dbt-env
 
 # dbt runtime artifacts
 Kode/dbt_project/target/
 Kode/dbt_project/dbt_packages/
 Kode/dbt_project/logs/
-
-# Konfigurasi lokal
-Kode/dbt_project/profiles.yml
